@@ -7,6 +7,7 @@ This application reads building access control system logs and generates various
 
 import csv
 import os
+import argparse
 from datetime import datetime
 from collections import defaultdict
 
@@ -73,8 +74,14 @@ class BuildingAccessAnalyzer:
 
 def main():
     """Main function to run the application."""
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Building Access Control System Analyzer')
+    parser.add_argument('-f', '--file', default="sampleData.csv", 
+                        help='Path to the CSV data file (default: sampleData.csv)')
+    args = parser.parse_args()
+    
     # File paths
-    data_file = "sampleData.csv"
+    data_file = args.file
     reports_dir = "reports"
     os.makedirs(reports_dir, exist_ok=True)
     

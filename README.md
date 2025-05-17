@@ -13,6 +13,7 @@ The Building Access Analyzer processes CSV data from building access control sys
 - Handles multiple fobs per unit
 - Sorts output by unit number for easy reference
 - Saves reports to CSV files with timestamps
+- Accepts custom data file path via command line
 
 ## Requirements
 
@@ -31,7 +32,7 @@ No additional dependencies are required as the application uses only Python stan
 
 ## Usage
 
-1. Place your access control data in a CSV file named `sampleData.csv` in the project directory. The CSV should have the following columns:
+1. Place your access control data in a CSV file in the project directory. The CSV should have the following columns:
    - UnitID
    - CardFirstName (used as the unit number)
    - CardLastName
@@ -41,14 +42,25 @@ No additional dependencies are required as the application uses only Python stan
 2. Run the analyzer:
 
 ```bash
+# Using the default data file (sampleData.csv)
 python3 building_access_analyzer.py
+
+# OR specify a custom data file
+python3 building_access_analyzer.py -f last3month.csv
+python3 building_access_analyzer.py --file path/to/your/data.csv
 ```
 
 3. The application will:
-   - Load the data from `sampleData.csv`
+   - Load the data from the specified CSV file (or sampleData.csv by default)
    - Generate a report showing which units have which fobs
    - Save the report to the `reports` directory with a timestamp
    - Print the report to the console
+
+## Command Line Options
+
+| Option | Description |
+|--------|-------------|
+| `-f FILE`, `--file FILE` | Path to the CSV data file (default: sampleData.csv) |
 
 ## Sample Data Format
 

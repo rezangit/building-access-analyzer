@@ -1,8 +1,8 @@
 # Ignore generated reports (may contain sensitive data)
 reports/
 
-# Ignore sample data files (may contain sensitive information)
-sampleData.csv
+# Ignore all CSV files (may contain sensitive information)
+*.csv
 
 # Ignore backup files
 *.bak
