@@ -23,22 +23,16 @@ class TestBuildingAccessAnalyzer(unittest.TestCase):
                 "CardFirstName": "unit101", 
                 "CardLastName": "unit101 resident", 
                 "CardBatch": "210", 
-                "CardNumber": "54321"
+                "CardNumber": "54321",
+                "AccessTimestamp": "2023-05-15T08:30:00"
             },
             {
                 "UnitID": "B102", 
                 "CardFirstName": "unit102", 
                 "CardLastName": "unit102 resident", 
                 "CardBatch": "220", 
-                "CardNumber": "65432"
-            },
-            # Another record for unit102 with same UnitID but accessing a different door
-            {
-                "UnitID": "B102", 
-                "CardFirstName": "unit102", 
-                "CardLastName": "unit102 resident", 
-                "CardBatch": "220", 
-                "CardNumber": "65432"
+                "CardNumber": "65432",
+                "AccessTimestamp": "2023-05-15T09:15:00"
             },
             # Another record for unit102 with same UnitID but accessing a different door
             {
@@ -46,14 +40,25 @@ class TestBuildingAccessAnalyzer(unittest.TestCase):
                 "CardFirstName": "unit102", 
                 "CardLastName": "unit102 resident", 
                 "CardBatch": "220", 
-                "CardNumber": "65432"
+                "CardNumber": "65432",
+                "AccessTimestamp": "2023-05-15T09:30:00"
+            },
+            # Another record for unit102 with same UnitID but accessing a different door
+            {
+                "UnitID": "B102", 
+                "CardFirstName": "unit102", 
+                "CardLastName": "unit102 resident", 
+                "CardBatch": "220", 
+                "CardNumber": "65432",
+                "AccessTimestamp": "2023-05-15T18:45:00"
             },
             {
                 "UnitID": "C103", 
                 "CardFirstName": "unit103", 
                 "CardLastName": "unit103 resident", 
                 "CardBatch": "230", 
-                "CardNumber": "76543"
+                "CardNumber": "76543",
+                "AccessTimestamp": "2023-05-15T12:10:00"
             },
             # First fob for unit104
             {
@@ -61,7 +66,8 @@ class TestBuildingAccessAnalyzer(unittest.TestCase):
                 "CardFirstName": "unit104", 
                 "CardLastName": "unit104 resident", 
                 "CardBatch": "240", 
-                "CardNumber": "87654"
+                "CardNumber": "87654",
+                "AccessTimestamp": "2023-05-15T14:20:00"
             },
             # Second fob for unit104 (same UnitID but different fob)
             {
@@ -69,13 +75,14 @@ class TestBuildingAccessAnalyzer(unittest.TestCase):
                 "CardFirstName": "unit104", 
                 "CardLastName": "unit104 resident", 
                 "CardBatch": "250", 
-                "CardNumber": "98765"
+                "CardNumber": "98765",
+                "AccessTimestamp": "2023-05-15T14:25:00"
             }
         ]
         
         # Write test data to CSV file
         with open(self.test_data_file, 'w', newline='') as file:
-            fieldnames = ["UnitID", "CardFirstName", "CardLastName", "CardBatch", "CardNumber"]
+            fieldnames = ["UnitID", "CardFirstName", "CardLastName", "CardBatch", "CardNumber", "AccessTimestamp"]
             writer = csv.DictWriter(file, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(test_data)
@@ -173,7 +180,7 @@ class TestBuildingAccessAnalyzer(unittest.TestCase):
         # Create an empty data file
         empty_data_file = os.path.join(self.temp_dir.name, "empty_data.csv")
         with open(empty_data_file, 'w', newline='') as file:
-            fieldnames = ["UnitID", "CardFirstName", "CardLastName", "CardBatch", "CardNumber"]
+            fieldnames = ["UnitID", "CardFirstName", "CardLastName", "CardBatch", "CardNumber", "AccessTimestamp"]
             writer = csv.DictWriter(file, fieldnames=fieldnames)
             writer.writeheader()
             # No rows written - empty data
@@ -206,7 +213,7 @@ class TestBuildingAccessAnalyzer(unittest.TestCase):
         # Create a file with malformed data (missing fields)
         malformed_data_file = os.path.join(self.temp_dir.name, "malformed_data.csv")
         with open(malformed_data_file, 'w', newline='') as file:
-            fieldnames = ["UnitID", "CardFirstName", "CardLastName", "CardBatch", "CardNumber"]
+            fieldnames = ["UnitID", "CardFirstName", "CardLastName", "CardBatch", "CardNumber", "AccessTimestamp"]
             writer = csv.DictWriter(file, fieldnames=fieldnames)
             writer.writeheader()
             # Write some rows with missing data
@@ -215,21 +222,24 @@ class TestBuildingAccessAnalyzer(unittest.TestCase):
                 "CardFirstName": "unit101", 
                 "CardLastName": "unit101 resident", 
                 # Missing CardBatch
-                "CardNumber": "54321"
+                "CardNumber": "54321",
+                "AccessTimestamp": "2023-05-15T08:30:00"
             })
             writer.writerow({
                 "UnitID": "B102", 
                 "CardFirstName": "unit102", 
                 # Missing CardLastName
                 "CardBatch": "220", 
-                "CardNumber": "65432"
+                "CardNumber": "65432",
+                "AccessTimestamp": "2023-05-15T09:15:00"
             })
             writer.writerow({
                 "UnitID": "C103", 
                 # Missing CardFirstName
                 "CardLastName": "unit103 resident", 
                 "CardBatch": "230", 
-                "CardNumber": "76543"
+                "CardNumber": "76543",
+                "AccessTimestamp": "2023-05-15T12:10:00"
             })
         
         # Initialize analyzer with malformed data
@@ -283,12 +293,75 @@ class TestBuildingAccessAnalyzer(unittest.TestCase):
         sorted_unit_numbers = sorted(unit_numbers)
         self.assertEqual(unit_numbers, sorted_unit_numbers)
     
+    def test_generate_busy_time_report(self):
+        """Test that the busy time report is generated correctly."""
+        # Generate the report
+        busy_output_file = os.path.join(self.output_dir, "busy_time_report.csv")
+        report_content = self.analyzer.generate_busy_time_report(busy_output_file)
+        
+        # Check that the file was created
+        self.assertTrue(os.path.exists(busy_output_file))
+        
+        # Check the content of the report
+        expected_lines = [
+            "Unit Number (First Name),Busiest Time(s) (Hour:Minute)",
+            "unit101,8:00",
+            "unit102,9:00",
+            "unit103,12:00",
+            "unit104,14:00"
+        ]
+        
+        # Read the actual content
+        with open(busy_output_file, 'r') as file:
+            actual_lines = [line.strip() for line in file.readlines()]
+        
+        # Compare expected vs actual
+        self.assertEqual(len(actual_lines), len(expected_lines))
+        for expected, actual in zip(expected_lines, actual_lines):
+            self.assertEqual(expected, actual)
+        
+        # Also check the returned content
+        report_lines = report_content.strip().split('\n')
+        self.assertEqual(len(report_lines), len(expected_lines))
+        for expected, actual in zip(expected_lines, report_lines):
+            self.assertEqual(expected, actual)
+    
+    def test_empty_data_busy_time_report(self):
+        """Test that the analyzer handles empty data gracefully for busy time report."""
+        # Create an empty data file
+        empty_data_file = os.path.join(self.temp_dir.name, "empty_data.csv")
+        with open(empty_data_file, 'w', newline='') as file:
+            fieldnames = ["UnitID", "CardFirstName", "CardLastName", "CardBatch", "CardNumber", "AccessTimestamp"]
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            # No rows written - empty data
+        
+        # Initialize analyzer with empty data
+        empty_analyzer = BuildingAccessAnalyzer(empty_data_file)
+        
+        # Generate report with empty data
+        empty_output_file = os.path.join(self.output_dir, "empty_busy_report.csv")
+        report_content = empty_analyzer.generate_busy_time_report(empty_output_file)
+        
+        # Check that the file was created
+        self.assertTrue(os.path.exists(empty_output_file))
+        
+        # Check that the report only contains the header
+        expected_lines = ["Unit Number (First Name),Busiest Time(s) (Hour:Minute)"]
+        
+        # Read the actual content
+        with open(empty_output_file, 'r') as file:
+            actual_lines = [line.strip() for line in file.readlines()]
+        
+        self.assertEqual(len(actual_lines), len(expected_lines))
+        self.assertEqual(actual_lines[0], expected_lines[0])
+    
     def test_duplicate_fob_ids(self):
         """Test that duplicate fob IDs for the same unit are handled correctly."""
         # Create test data with duplicate fob IDs for the same unit
         duplicate_data_file = os.path.join(self.temp_dir.name, "duplicate_data.csv")
         with open(duplicate_data_file, 'w', newline='') as file:
-            fieldnames = ["UnitID", "CardFirstName", "CardLastName", "CardBatch", "CardNumber"]
+            fieldnames = ["UnitID", "CardFirstName", "CardLastName", "CardBatch", "CardNumber", "AccessTimestamp"]
             writer = csv.DictWriter(file, fieldnames=fieldnames)
             writer.writeheader()
             # Write some rows with duplicate fob IDs
@@ -297,7 +370,8 @@ class TestBuildingAccessAnalyzer(unittest.TestCase):
                 "CardFirstName": "unit101", 
                 "CardLastName": "unit101 resident", 
                 "CardBatch": "210", 
-                "CardNumber": "54321"
+                "CardNumber": "54321",
+                "AccessTimestamp": "2023-05-15T08:30:00"
             })
             # Duplicate entry for unit101
             writer.writerow({
@@ -305,7 +379,8 @@ class TestBuildingAccessAnalyzer(unittest.TestCase):
                 "CardFirstName": "unit101", 
                 "CardLastName": "unit101 resident", 
                 "CardBatch": "210", 
-                "CardNumber": "54321"
+                "CardNumber": "54321",
+                "AccessTimestamp": "2023-05-15T08:45:00"
             })
             # Different unit
             writer.writerow({
@@ -313,7 +388,8 @@ class TestBuildingAccessAnalyzer(unittest.TestCase):
                 "CardFirstName": "unit102", 
                 "CardLastName": "unit102 resident", 
                 "CardBatch": "220", 
-                "CardNumber": "65432"
+                "CardNumber": "65432",
+                "AccessTimestamp": "2023-05-15T09:15:00"
             })
         
         # Initialize analyzer with duplicate data
@@ -333,6 +409,72 @@ class TestBuildingAccessAnalyzer(unittest.TestCase):
         # Check that unit101 has only one fob ID (duplicates should be removed)
         self.assertEqual(len(unit_to_fobs["unit101"]), 1)
         self.assertEqual(unit_to_fobs["unit101"][0], "210-54321")
+
+    def test_multiple_busy_hours(self):
+        """Test that the analyzer correctly identifies multiple busy hours when tied."""
+        # Create a file with multiple busy hours for the same unit
+        multiple_busy_file = os.path.join(self.temp_dir.name, "multiple_busy.csv")
+        with open(multiple_busy_file, 'w', newline='') as file:
+            fieldnames = ["UnitID", "CardFirstName", "CardLastName", "CardBatch", "CardNumber", "AccessTimestamp"]
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            # Write data with multiple busy hours for unit101
+            writer.writerow({
+                "UnitID": "A101", 
+                "CardFirstName": "unit101", 
+                "CardLastName": "unit101 resident", 
+                "CardBatch": "210", 
+                "CardNumber": "54321",
+                "AccessTimestamp": "2023-05-15T08:30:00"
+            })
+            writer.writerow({
+                "UnitID": "A101", 
+                "CardFirstName": "unit101", 
+                "CardLastName": "unit101 resident", 
+                "CardBatch": "210", 
+                "CardNumber": "54321",
+                "AccessTimestamp": "2023-05-15T08:45:00"
+            })
+            # Same count for another hour (2 entries at hour 14)
+            writer.writerow({
+                "UnitID": "A101", 
+                "CardFirstName": "unit101", 
+                "CardLastName": "unit101 resident", 
+                "CardBatch": "210", 
+                "CardNumber": "54321",
+                "AccessTimestamp": "2023-05-15T14:15:00"
+            })
+            writer.writerow({
+                "UnitID": "A101", 
+                "CardFirstName": "unit101", 
+                "CardLastName": "unit101 resident", 
+                "CardBatch": "210", 
+                "CardNumber": "54321",
+                "AccessTimestamp": "2023-05-15T14:45:00"
+            })
+        
+        # Initialize analyzer with this data
+        multiple_busy_analyzer = BuildingAccessAnalyzer(multiple_busy_file)
+        
+        # Generate report
+        multiple_busy_output = os.path.join(self.output_dir, "multiple_busy_report.csv")
+        report_content = multiple_busy_analyzer.generate_busy_time_report(multiple_busy_output)
+        
+        # Parse the report
+        unit101_busy_times = None
+        for line in report_content.strip().split('\n'):
+            if line.startswith("unit101"):
+                unit101_busy_times = line.split(',')[1]
+                break
+        
+        # Check that both hours are reported
+        self.assertIsNotNone(unit101_busy_times, "unit101 should be in the report")
+        self.assertIn("8:00", unit101_busy_times)
+        self.assertIn("14:00", unit101_busy_times)
+        
+        # The hours should be reported in order
+        self.assertEqual(unit101_busy_times, "8:00; 14:00")
+
 
 if __name__ == "__main__":
     unittest.main()
